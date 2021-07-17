@@ -23,7 +23,6 @@ RcloneCacheShare="/mnt/user0/mount_rclone" # location of rclone cache files with
 RcloneCacheMaxSize="400G" # Maximum size of rclone cache
 RcloneCacheMaxAge="336h" # Maximum age of cache files
 MergerfsMountShare="/mnt/user/mount_mergerfs" # location without trailing slash  e.g. /mnt/user/mount_mergerfs. Enter 'ignore' to disable
-DockerStart="nzbget plex sonarr radarr ombi" # list of dockers, separated by space, to start once mergerfs mount verified. Remember to disable AUTOSTART for dockers added in docker settings page
 MountFolders=\{"downloads/complete,downloads/intermediate,downloads/seeds,movies,tv"\} # comma separated list of folders to create within the mount
 
 # Note: Again - remember to NOT use ':' in your remote name above
@@ -153,8 +152,7 @@ else
 	if [[ -f "$RcloneMountLocation/mountcheck" ]]; then
 		echo "$(date "+%d.%m.%Y %T") INFO: Successful mount of ${RcloneRemoteName} mount."
 	else
-		echo "$(date "+%d.%m.%Y %T") CRITICAL: ${RcloneRemoteName} mount failed - please check for problems.  Stopping dockers"
-		docker stop $DockerStart
+		echo "$(date "+%d.%m.%Y %T") CRITICAL: ${RcloneRemoteName} mount failed - please check for problems."
 		rm /mnt/user/appdata/other/rclone/remotes/$RcloneRemoteName/mount_running
 		exit
 	fi
@@ -219,27 +217,10 @@ else
 		if [[ -f "$MergerFSMountLocation/mountcheck" ]]; then
 			echo "$(date "+%d.%m.%Y %T") INFO: Check successful, ${RcloneRemoteName} mergerfs mount created."
 		else
-			echo "$(date "+%d.%m.%Y %T") CRITICAL: ${RcloneRemoteName} mergerfs mount failed.  Stopping dockers."
-			docker stop $DockerStart
+			echo "$(date "+%d.%m.%Y %T") CRITICAL: ${RcloneRemoteName} mergerfs mount failed."
 			rm /mnt/user/appdata/other/rclone/remotes/$RcloneRemoteName/mount_running
 			exit
 		fi
-	fi
-fi
-
-####### Starting Dockers That Need Mergerfs Mount To Work Properly #######
-
-# only start dockers once
-if [[ -f "/mnt/user/appdata/other/rclone/remotes/$RcloneRemoteName/dockers_started" ]]; then
-	echo "$(date "+%d.%m.%Y %T") INFO: dockers already started."
-else
-# Check CA Appdata plugin not backing up or restoring
-	if [ -f "/tmp/ca.backup2/tempFiles/backupInProgress" ] || [ -f "/tmp/ca.backup2/tempFiles/restoreInProgress" ] ; then
-		echo "$(date "+%d.%m.%Y %T") INFO: Appdata Backup plugin running - not starting dockers."
-	else
-		touch /mnt/user/appdata/other/rclone/remotes/$RcloneRemoteName/dockers_started
-		echo "$(date "+%d.%m.%Y %T") INFO: Starting dockers."
-		docker start $DockerStart
 	fi
 fi
 
