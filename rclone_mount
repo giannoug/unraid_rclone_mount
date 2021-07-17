@@ -44,11 +44,6 @@ Command6=""
 Command7=""
 Command8=""
 
-CreateBindMount="N" # Y/N. Choose whether to bind traffic to a particular network adapter
-RCloneMountIP="192.168.1.252" # My unraid IP is 172.30.12.2 so I create another similar IP address
-NetworkAdapter="eth0" # choose your network adapter. eth0 recommended
-VirtualIPNumber="2" # creates eth0:x e.g. eth0:1.  I create a unique virtual IP addresses for each mount & upload so I can monitor and traffic shape for each of them
-
 ####### END SETTINGS #######
 
 ###############################################################################
@@ -116,20 +111,7 @@ else
 	touch mountcheck
 	rclone copy mountcheck $RcloneRemoteName: -vv --no-traverse
 # Check bind option
-	if [[  $CreateBindMount == 'Y' ]]; then
-		echo "$(date "+%d.%m.%Y %T") INFO: *** Checking if IP address ${RCloneMountIP} already created for remote ${RcloneRemoteName}"
-		ping -q -c2 $RCloneMountIP > /dev/null # -q quiet, -c number of pings to perform
-		if [ $? -eq 0 ]; then # ping returns exit status 0 if successful
-			echo "$(date "+%d.%m.%Y %T") INFO: *** IP address ${RCloneMountIP} already created for remote ${RcloneRemoteName}"
-		else
-			echo "$(date "+%d.%m.%Y %T") INFO: *** Creating IP address ${RCloneMountIP} for remote ${RcloneRemoteName}"
-			ip addr add $RCloneMountIP/24 dev $NetworkAdapter label $NetworkAdapter:$VirtualIPNumber
-		fi
-		echo "$(date "+%d.%m.%Y %T") INFO: *** Created bind mount ${RCloneMountIP} for remote ${RcloneRemoteName}"
-	else
-		RCloneMountIP=""
-		echo "$(date "+%d.%m.%Y %T") INFO: *** Creating mount for remote ${RcloneRemoteName}"
-	fi
+	echo "$(date "+%d.%m.%Y %T") INFO: *** Creating mount for remote ${RcloneRemoteName}"
 # create rclone mount
 	rclone mount \
 	$Command1 $Command2 $Command3 $Command4 $Command5 $Command6 $Command7 $Command8 \
@@ -141,7 +123,6 @@ else
 	--vfs-cache-mode full \
 	--vfs-cache-max-size $RcloneCacheMaxSize \
 	--vfs-cache-max-age $RcloneCacheMaxAge \
-	--bind=$RCloneMountIP \
 	$RcloneRemoteName: $RcloneMountLocation &
 
 # Check if Mount Successful
