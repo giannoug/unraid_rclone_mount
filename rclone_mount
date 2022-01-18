@@ -3,7 +3,7 @@
 ######################
 #### Mount Script ####
 ######################
-## Version 0.96.9.2 ##
+## Version 0.96.9.3 ##
 ######################
 
 ####### EDIT ONLY THESE SETTINGS #######
@@ -18,7 +18,7 @@
 RcloneRemoteName="gdrive_vfs" # Name of rclone remote mount WITHOUT ':'. NOTE: Choose your encrypted remote for sensitive data
 RcloneMountShare="/mnt/user/mount_rclone" # where your rclone remote will be located without trailing slash  e.g. /mnt/user/mount_rclone
 RcloneMountDirCacheTime="720h" # rclone dir cache time
-LocalFilesShare="/mnt/user/local" # location of the local files you want to upload without trailing slash to rclone e.g. /mnt/user/local.
+LocalFilesShare="ignore" # location of the local files and MountFolders you want to upload without trailing slash to rclone e.g. /mnt/user/local. Enter 'ignore' to disable
 RcloneCacheShare="/mnt/user0/mount_rclone" # location of rclone cache files without trailing slash e.g. /mnt/user0/mount_rclone
 RcloneCacheMaxSize="400G" # Maximum size of rclone cache
 RcloneCacheMaxAge="336h" # Maximum age of cache files
@@ -57,8 +57,14 @@ MergerFSMountLocation="$MergerfsMountShare/$RcloneRemoteName" # Rclone data fold
 ####### create directories for rclone mount and mergerfs mounts #######
 mkdir -p /mnt/user/appdata/other/rclone/remotes/$RcloneRemoteName # for script files
 mkdir -p $RcloneCacheShare/cache/$RcloneRemoteName # for cache files
-echo "$(date "+%d.%m.%Y %T") INFO: Creating local folders."
-eval mkdir -p $LocalFilesLocation/
+if [[  $LocalFilesShare == 'ignore' ]]; then
+	echo "$(date "+%d.%m.%Y %T") INFO: Not creating local folders as requested."
+	LocalFilesLocation="/tmp/$RcloneRemoteName"
+	eval mkdir -p $LocalFilesLocation
+else
+	echo "$(date "+%d.%m.%Y %T") INFO: Creating local folders."
+	eval mkdir -p $LocalFilesLocation/"$MountFolders"
+fi
 mkdir -p $RcloneMountLocation
 
 if [[  $MergerfsMountShare == 'ignore' ]]; then
@@ -104,18 +110,23 @@ else
 	touch mountcheck
 	rclone copy mountcheck $RcloneRemoteName: -vv --no-traverse
 # Check bind option
-	echo "$(date "+%d.%m.%Y %T") INFO: *** Creating mount for remote ${RcloneRemoteName}"
+		echo "$(date "+%d.%m.%Y %T") INFO: *** Creating mount for remote ${RcloneRemoteName}"
 # create rclone mount
 	rclone mount \
 	$Command1 $Command2 $Command3 $Command4 $Command5 $Command6 $Command7 $Command8 \
 	--allow-other \
+	--umask 000 \
 	--dir-cache-time $RcloneMountDirCacheTime \
+	--attr-timeout $RcloneMountDirCacheTime \
 	--log-level INFO \
-	--poll-interval 15s \
+	--poll-interval 10s \
 	--cache-dir=$RcloneCacheShare/cache/$RcloneRemoteName \
+	--drive-pacer-min-sleep 10ms \
+	--drive-pacer-burst 1000 \
 	--vfs-cache-mode full \
 	--vfs-cache-max-size $RcloneCacheMaxSize \
 	--vfs-cache-max-age $RcloneCacheMaxAge \
+	--vfs-read-ahead 1G \
 	$RcloneRemoteName: $RcloneMountLocation &
 
 # Check if Mount Successful
